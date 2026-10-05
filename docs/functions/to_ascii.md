@@ -24,6 +24,10 @@ output "names" {
   value = [for name in ["_acme-challenge.bücher", "*.bücher", "@"] : provider::idna::to_ascii(name)]
 }
 
+variable "zone_id" {
+  type = string
+}
+
 # With the easy-dns module (github.com/i386dev/terraform-cloudflare-easy-dns): the zone
 # name and the record names in Punycode, as Cloudflare expects them
 module "dns" {

@@ -58,7 +58,7 @@ func TestFunctionErrors(t *testing.T) {
 			},
 			{
 				Config:      `output "x" { value = provider::idna::to_unicode("xn--zz.de") }`,
-				ExpectError: regexp.MustCompile(`not\s+a\s+valid\s+internationalized\s+domain\s+name`),
+				ExpectError: regexp.MustCompile(`not\s+a\s+valid\s+internationalized\s+label`),
 			},
 		},
 	})

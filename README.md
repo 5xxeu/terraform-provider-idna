@@ -32,10 +32,10 @@ Both take a domain name or a name in a zone: `münchen.de`, `www.bücher`, `_acm
 
 ## Rules
 
-- The conversion follows [UTS #46](https://www.unicode.org/reports/tr46/) with nontransitional processing, like browsers: names are mapped (lower case, compatibility characters such as `ﬁ` to `fi`) and checked (IDNA 2008 contexts, bidi rules). `ß` stays `ß` (`faß.de` is `xn--fa-hia.de`), as registries handle it today.
-- What zones need beyond host names is kept: labels with `_` (`_dmarc`, `_sip._tcp`), a `*` wildcard as the leftmost label, `@`, a trailing dot. ASCII labels are only lower-cased.
+- Internationalized labels (with characters outside ASCII, or `xn--` labels) follow [UTS #46](https://www.unicode.org/reports/tr46/) with nontransitional processing, like browsers: they are mapped (lower case, compatibility characters such as `ﬁ` to `fi`) and checked (IDNA 2008 contexts, bidi rule, hyphens, Punycode). `ß` stays `ß` (`faß.de` is `xn--fa-hia.de`), as registries handle it today.
+- ASCII labels are checked as DNS labels, not by the IDNA rules, and only lower-cased: labels with `_` (`_dmarc`, `_sip._tcp`), `--` inside (`ab--cd`), also next to a right-to-left label (`_acme-challenge.שלום.com`). A `*` wildcard as the leftmost label, `@` and a trailing dot are kept, and `。`, `．`, `｡` count as dots, as in UTS #46.
 - The result is checked as a DNS name: labels of 1 to 63 characters and at most 253 in total in ASCII (a short Unicode label can be long in Punycode), Punycode labels of letters, digits and `-`, other labels of letters, digits, `_` and `-`.
-- A name that is not valid fails at `plan` with the reason, for example `"a b.de" has a label with characters that are not allowed in a DNS name`.
+- A name that is not valid fails at `plan` with the position of the label and the reason, for example `label 1 of 2: the label has characters that are not allowed in a DNS name`. The message never contains the name, which may be a sensitive value; Terraform shows a non-sensitive argument next to it.
 - UTS #46 accepts some symbols that IDNA 2008 registries refuse, such as emoji (`😀.de` is `xn--e28h.de`), as browsers do. Whether a registry accepts a name is up to the registry.
 
 The conversion uses [golang.org/x/net/idna](https://pkg.go.dev/golang.org/x/net/idna).

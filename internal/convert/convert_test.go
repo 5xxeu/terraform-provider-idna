@@ -22,6 +22,17 @@ func TestToASCII(t *testing.T) {
 		{"xn--mnchen-3ya.de", "xn--mnchen-3ya.de"},
 		{"@", "@"},
 		{"ﬁ.de", "fi.de"}, // UTS #46 mapping
+		// DNS labels next to a right-to-left label: the bidi rule applies to the
+		// internationalized label only
+		{"_acme-challenge.שלום.com", "_acme-challenge.xn--9dbne9b.com"},
+		{"*.שלום.com", "*.xn--9dbne9b.com"},
+		{"_acme-challenge.xn--9dbne9b.com", "_acme-challenge.xn--9dbne9b.com"},
+		// "--" in positions 3 and 4 is allowed in ASCII labels
+		{"ab--cd.example", "ab--cd.example"},
+		{"r3--sn-abc.bücher.de", "r3--sn-abc.xn--bcher-kva.de"},
+		// The dots that UTS #46 maps to "."
+		{"münchen。de", "xn--mnchen-3ya.de"},
+		{"münchen．de", "xn--mnchen-3ya.de"},
 	}
 	for _, c := range cases {
 		got, err := ToASCII(c.in)
@@ -41,6 +52,9 @@ func TestToUnicode(t *testing.T) {
 		{"münchen.de", "münchen.de"},
 		{"example.com", "example.com"},
 		{"@", "@"},
+		{"_acme-challenge.xn--9dbne9b.com", "_acme-challenge.שלום.com"},
+		{"*.xn--9dbne9b.com", "*.שלום.com"},
+		{"ab--cd.example", "ab--cd.example"},
 	}
 	for _, c := range cases {
 		got, err := ToUnicode(c.in)
@@ -65,17 +79,19 @@ func TestRoundTrip(t *testing.T) {
 
 func TestErrors(t *testing.T) {
 	cases := []struct{ in, contains string }{
-		{"", "is not a domain name"},
-		{".", "is not a domain name"},
+		{"", "the name is empty"},
+		{".", "the name is empty"},
 		{"a b.de", "not allowed in a DNS name"},
-		{"a..de", "empty label"},
-		{".de", "empty label"},
-		{"-bad.de", "not a valid internationalized domain name"}, // hyphen rules of IDNA
-		{"bücher_x.de", "not allowed in an internationalized label"},
-		{"www.*.de", "wildcard that is not the leftmost label"},
-		{"a‍b.de", "not a valid internationalized domain name"},    // ZWJ outside its context
-		{"abcש.com", "not a valid internationalized domain name"},  // bidi rule
-		{"xn--zz.de", "not a valid internationalized domain name"}, // invalid Punycode
+		{"a..de", "label 2 of 3: the label is empty"},
+		{".de", "label 1 of 2: the label is empty"},
+		{"-bad.de", "not allowed in a DNS name"},
+		{"bad-.de", "not allowed in a DNS name"},
+		{"bücher_x.de", "not a valid internationalized label"},
+		{"www.*.de", "wildcard"},
+		{"a\u200db.de", "not a valid internationalized label"}, // ZWJ outside its context
+		{"abcש.com", "not a valid internationalized label"},    // bidi rule within the label
+		{"xn--zz.de", "not a valid internationalized label"},   // invalid Punycode
+		{"ab--cü.de", "not a valid internationalized label"},   // hyphens in 3 and 4 of an internationalized label
 		{strings.Repeat("a", 64) + ".de", "more than the 63"},
 		{strings.Repeat("ü", 60) + ".de", "more than the 63"}, // short in Unicode, long in ASCII
 		{strings.Repeat("a.", 127) + "de", "more than the 253"},
@@ -88,5 +104,20 @@ func TestErrors(t *testing.T) {
 	}
 	if got, err := ToUnicode("xn--zz.de"); err == nil {
 		t.Errorf("ToUnicode(%q) = %q, want an error", "xn--zz.de", got)
+	}
+}
+
+// The name may be sensitive: errors never contain it or a part of it
+func TestErrorsDoNotContainTheName(t *testing.T) {
+	for _, name := range []string{"secret origin.example", "secret-ü_x.example", "xn--zz.secret.example", "abcש.secret.example"} {
+		_, err := ToASCII(name)
+		if err == nil {
+			t.Fatalf("ToASCII(%q) did not fail", name)
+		}
+		for _, part := range []string{"secret", "origin", "xn--zz", "abc"} {
+			if strings.Contains(err.Error(), part) {
+				t.Errorf("ToASCII(%q): error %q contains %q", name, err, part)
+			}
+		}
 	}
 }
