@@ -7,7 +7,8 @@
 // Labels are processed one by one: the IDNA rules (mapping, contexts, bidi, hyphen
 // positions, Punycode) apply to internationalized labels only, ASCII labels are checked
 // as DNS labels. So "_acme-challenge" next to a right-to-left label and "ab--cd" are
-// accepted, as DNS allows them.
+// accepted, as DNS allows them. The bidi rule (RFC 5893) still looks at the whole name:
+// when any label is right-to-left, every internationalized label must satisfy it.
 //
 // Errors name the label by its position and the reason, never the name or a label:
 // the name may be a sensitive value, and Terraform shows a non-sensitive argument in its
@@ -22,6 +23,8 @@ import (
 	"unicode/utf8"
 
 	"golang.org/x/net/idna"
+	"golang.org/x/text/secure/bidirule"
+	"golang.org/x/text/unicode/bidi"
 )
 
 // UTS #46 lookup processing for one internationalized label
@@ -66,12 +69,22 @@ func convert(name string, unicode bool) (string, error) {
 	labels := strings.Split(body, ".")
 	ascii := make([]string, len(labels))
 	out := make([]string, len(labels))
+	international := make([]bool, len(labels))
 	for i, label := range labels {
 		a, u, err := convertLabel(label, i)
 		if err != nil {
 			return "", fmt.Errorf("label %d of %d: %w", i+1, len(labels), err)
 		}
-		ascii[i], out[i] = a, u
+		ascii[i], out[i], international[i] = a, u, strings.HasPrefix(a, "xn--")
+	}
+	// A name with a right-to-left label is a bidi domain name (RFC 5893): every
+	// internationalized label must satisfy the bidi rule, not only the right-to-left ones
+	if isBidiName(out) {
+		for i, u := range out {
+			if international[i] && !bidirule.ValidString(u) {
+				return "", fmt.Errorf("label %d of %d: the label breaks the bidi rule of a name with right-to-left labels (RFC 5893)", i+1, len(labels))
+			}
+		}
 	}
 	if n := len(strings.Join(ascii, ".")); n > 253 {
 		return "", fmt.Errorf("the name is %d characters long in ASCII, more than the 253 a domain name can have", n)
@@ -124,6 +137,20 @@ func convertLabel(label string, index int) (ascii, unicode string, err error) {
 		}
 		return ascii, ascii, nil
 	}
+}
+
+// isBidiName reports whether a label has a right-to-left character (bidi class R, AL or AN)
+func isBidiName(labels []string) bool {
+	for _, label := range labels {
+		for _, r := range label {
+			p, _ := bidi.LookupRune(r)
+			switch p.Class() {
+			case bidi.R, bidi.AL, bidi.AN:
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func isASCII(s string) bool {

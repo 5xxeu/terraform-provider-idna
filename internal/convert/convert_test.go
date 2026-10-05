@@ -33,6 +33,9 @@ func TestToASCII(t *testing.T) {
 		// The dots that UTS #46 maps to "."
 		{"münchen。de", "xn--mnchen-3ya.de"},
 		{"münchen．de", "xn--mnchen-3ya.de"},
+		// An internationalized label that starts with a digit: fine without a
+		// right-to-left label in the name
+		{"1é.com", "xn--1-bga.com"},
 	}
 	for _, c := range cases {
 		got, err := ToASCII(c.in)
@@ -104,6 +107,23 @@ func TestErrors(t *testing.T) {
 	}
 	if got, err := ToUnicode("xn--zz.de"); err == nil {
 		t.Errorf("ToUnicode(%q) = %q, want an error", "xn--zz.de", got)
+	}
+}
+
+// With a right-to-left label in the name, every internationalized label must satisfy
+// the bidi rule (RFC 5893), also in another label; ASCII labels stay DNS labels
+func TestBidiName(t *testing.T) {
+	for _, name := range []string{"1é.שלום", "שלום.1é", "xn--1-bga.xn--9dbne9b"} {
+		for fn, f := range map[string]func(string) (string, error){"ToASCII": ToASCII, "ToUnicode": ToUnicode} {
+			if got, err := f(name); err == nil || !strings.Contains(err.Error(), "bidi rule of a name") {
+				t.Errorf("%s(%q) = %q, %v; want a bidi rule error", fn, name, got, err)
+			}
+		}
+	}
+	for _, name := range []string{"_acme-challenge.שלום.com", "1abc.שלום.com", "www.שלום.com", "é.שלום"} {
+		if _, err := ToASCII(name); err != nil {
+			t.Errorf("ToASCII(%q): %v", name, err)
+		}
 	}
 }
 
