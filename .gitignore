@@ -1,0 +1,10 @@
+.DS_Store
+/dist/
+/terraform-provider-idna
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+
+# Local notes
+.todo
