@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/function"
 
-	"github.com/i386dev/terraform-provider-idna/internal/convert"
+	"github.com/5xxeu/terraform-provider-idna/internal/convert"
 )
 
 // stringFunction is a function of one string that returns a string or an error about

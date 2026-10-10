@@ -16,7 +16,7 @@ terraform {
   required_version = ">= 1.8.0"
   required_providers {
     idna = {
-      source  = "i386dev/idna"
+      source  = "5xxeu/idna"
       version = "~> 0.1"
     }
   }

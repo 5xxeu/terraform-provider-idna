@@ -1,4 +1,4 @@
-module github.com/i386dev/terraform-provider-idna
+module github.com/5xxeu/terraform-provider-idna
 
 go 1.26.0
 
