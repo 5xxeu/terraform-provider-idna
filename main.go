@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
-	"github.com/i386dev/terraform-provider-idna/internal/provider"
+	"github.com/5xxeu/terraform-provider-idna/internal/provider"
 )
 
 // Set by goreleaser
@@ -19,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	err := providerserver.Serve(context.Background(), provider.New(version), providerserver.ServeOpts{
-		Address: "registry.terraform.io/i386dev/idna",
+		Address: "registry.terraform.io/5xxeu/idna",
 		Debug:   debug,
 	})
 	if err != nil {
