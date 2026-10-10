@@ -41,13 +41,14 @@ Both take a domain name or a name in a zone: `münchen.de`, `www.bücher`, `_acm
 
 The conversion uses [golang.org/x/net/idna](https://pkg.go.dev/golang.org/x/net/idna).
 
-## With easy-dns
+## With ezdns
 
-[easy-dns](https://github.com/i386dev/terraform-cloudflare-easy-dns) expects internationalized names in Punycode, as the Cloudflare API does. With this provider, the configuration can keep them readable:
+[ezdns](https://registry.terraform.io/modules/5xxeu/ezdns/cloudflare) expects internationalized names in Punycode, as the Cloudflare API does. With this provider, the configuration can keep them readable:
 
 ```hcl
 module "dns" {
-  source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.12.0"
+  source  = "5xxeu/ezdns/cloudflare"
+  version = "~> 2.12"
 
   zone_id   = var.zone_id
   zone_name = provider::idna::to_ascii("münchen.de")

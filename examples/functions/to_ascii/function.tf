@@ -13,10 +13,11 @@ variable "zone_id" {
   type = string
 }
 
-# With the easy-dns module (github.com/i386dev/terraform-cloudflare-easy-dns): the zone
+# With the ezdns module (registry.terraform.io/modules/5xxeu/ezdns/cloudflare): the zone
 # name and the record names in Punycode, as Cloudflare expects them
 module "dns" {
-  source = "git::https://github.com/i386dev/terraform-cloudflare-easy-dns.git?ref=v2.12.0"
+  source  = "5xxeu/ezdns/cloudflare"
+  version = "~> 2.12"
 
   zone_id   = var.zone_id
   zone_name = provider::idna::to_ascii("münchen.de")
